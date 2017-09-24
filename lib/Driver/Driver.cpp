@@ -919,6 +919,19 @@ void Driver::buildInputs(const ToolChain &TC,
 
   llvm::StringMap<StringRef> SourceFileNames;
 
+  bool MainInputExists = false;
+  bool ShouldRunMainExistsCheck = true;
+  int SwiftInputCount = 0;
+
+  const Arg *const OutputModeArg = Args.getLastArg(options::OPT_modes_Group);
+  if (OutputModeArg) {
+    if (OutputModeArg->getOption().getID() != options::OPT_emit_executable) {
+      ShouldRunMainExistsCheck = false;
+    }
+  } else if (Args.hasArg(options::OPT_emit_module, options::OPT_emit_module_path)) {
+    ShouldRunMainExistsCheck = false;
+  }
+
   for (Arg *A : Args) {
     if (A->getOption().getKind() == Option::InputClass) {
       StringRef Value = A->getValue();
@@ -959,10 +972,26 @@ void Driver::buildInputs(const ToolChain &TC,
                          Basename, SourceFileNames[Basename], Value);
           Diags.diagnose(SourceLoc(), diag::note_explain_two_files_same_name);
         }
+
+        ++SwiftInputCount;
+
+        if (ShouldRunMainExistsCheck && Basename.equals("main.swift")) {
+          MainInputExists = true;
+        }
+      } else {
+        ShouldRunMainExistsCheck = false;
       }
     }
 
     // FIXME: add -x support (or equivalent)
+  }
+
+  // If SwiftInputCount is 1, then we'll just use that as the main, but
+  // in the case that there's more than 1 input swift file and none are named
+  // main.swift, it's unclear which we should use.
+  if (ShouldRunMainExistsCheck && !MainInputExists && SwiftInputCount > 1) {
+    Diags.diagnose(SourceLoc(), diag::error_missing_main_file);
+    Diags.diagnose(SourceLoc(), diag::note_explain_missing_main_file);
   }
 }
 

@@ -111,6 +111,12 @@ NOTE(note_explain_two_files_same_name,none,
      "filenames are used to distinguish private declarations with the same "
      "name", ())
 
+ERROR(error_missing_main_file, none,
+      "no 'main.swift' file was used", ())
+NOTE(note_explain_missing_main_file, none,
+     "when emitting an executable from multiple files the 'main.swift' "
+     "file is used as the executable's entry point", ())
+
 WARNING(warn_cannot_stat_input,none,
         "unable to determine when '%0' was last modified: %1",
         (StringRef, StringRef))
